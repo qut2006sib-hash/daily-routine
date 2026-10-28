@@ -1,0 +1,88 @@
+@import "tailwindcss";
+@import "sonner/dist/styles.css";
+
+@theme {
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Fraunces", "Iowan Old Style", Palatino, Georgia, serif;
+
+  --color-paper: #f3eee6;
+  --color-sheet: #faf7f2;
+  --color-ink: #1c1915;
+  --color-muted: #6a6258;
+  --color-line: #e4d9cb;
+  --color-leaf: #2c6b4a;
+  --color-onleaf: #f7f3ec;
+  --color-veil: #1c1915;
+}
+
+html.dark {
+  color-scheme: dark;
+  --color-paper: #141311;
+  --color-sheet: #1c1b18;
+  --color-ink: #f4efe6;
+  --color-muted: #a89f92;
+  --color-line: #322e28;
+  --color-leaf: #2c6b4a;
+  --color-onleaf: #f7f3ec;
+  --color-veil: #000000;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: var(--color-paper);
+  }
+
+  body {
+    min-height: 100dvh;
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  ::selection {
+    background: var(--color-line);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-leaf);
+    outline-offset: 2px;
+  }
+
+  input[type="time"]::-webkit-calendar-picker-indicator {
+    opacity: 0.6;
+  }
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: 1rem;
+  z-index: 50;
+  transform: translateY(-200%);
+  border-radius: 0.375rem;
+  background: var(--color-ink);
+  color: var(--color-sheet);
+  padding: 0.5rem 0.75rem;
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
