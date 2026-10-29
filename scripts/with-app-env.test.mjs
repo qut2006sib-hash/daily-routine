@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -14,7 +14,7 @@ import {
 } from "./with-app-env.mjs";
 
 const execFileAsync = promisify(execFile);
-const WRAPPER = join(projectRoot(), "scripts/with-app-env.mjs");
+const SOURCE_WRAPPER = join(projectRoot(), "scripts/with-app-env.mjs");
 const PRINT_FLAG = "process.stdout.write(String(process.env.VITE_AUTH_ENABLED));";
 
 function makeWorkspace(appEnvJson) {
@@ -23,8 +23,18 @@ function makeWorkspace(appEnvJson) {
     mkdirSync(join(root, ".grok"), { recursive: true });
     writeFileSync(join(root, APP_ENV_REL_PATH), appEnvJson);
   }
+  mkdirSync(join(root, "scripts"), { recursive: true });
+  copyFileSync(SOURCE_WRAPPER, join(root, "scripts/with-app-env.mjs"));
   return root;
 }
+
+const FIXTURE_ROOT = makeWorkspace('{"VITE_AUTH_ENABLED":"false"}');
+const WRAPPER = join(FIXTURE_ROOT, "scripts/with-app-env.mjs");
+const fixtureEnv = () => {
+  const env = { ...process.env };
+  delete env.VITE_AUTH_ENABLED;
+  return env;
+};
 
 test("keeps VITE_-prefixed string entries", () => {
   assert.deepEqual(parseAppEnv('{"VITE_AUTH_ENABLED":"false"}'), {
@@ -59,7 +69,9 @@ test("an explicit process-env override wins over the file", () => {
   assert.equal(merged.PATH, "/usr/bin");
 });
 
-test("the template ships auth off", () => {
+test("the template ships auth off", {
+  skip: !existsSync(join(projectRoot(), APP_ENV_REL_PATH)) && "Optional builder app-env fixture is not included in this checkout",
+}, () => {
   assert.deepEqual(readAppEnv(projectRoot()), { VITE_AUTH_ENABLED: "false" });
 });
 
@@ -79,7 +91,7 @@ test("the wrapped command runs with the app env applied", async () => {
     process.execPath,
     "-e",
     PRINT_FLAG,
-  ]);
+  ], { env: fixtureEnv() });
   assert.equal(stdout, "false");
 });
 
@@ -117,12 +129,21 @@ test("the CLI still runs when invoked through a symlinked path", async () => {
   // node realpaths import.meta.url but not process.argv[1], so a raw comparison
   // turns the wrapper into a no-op that exits 0 without starting anything.
   const link = join(mkdtempSync(join(tmpdir(), "app-env-link-")), "scripts");
-  symlinkSync(join(projectRoot(), "scripts"), link);
+  symlinkSync(join(FIXTURE_ROOT, "scripts"), link);
   const { stdout } = await execFileAsync(process.execPath, [
     join(link, "with-app-env.mjs"),
     process.execPath,
     "-e",
     PRINT_FLAG,
-  ]);
+  ], { env: fixtureEnv() });
   assert.equal(stdout, "false");
+});
+
+
+test("the CLI runs normally when a checkout has no app-env document", async () => {
+  const root = makeWorkspace();
+  const { stdout } = await execFileAsync(process.execPath, [
+    join(root, "scripts/with-app-env.mjs"), process.execPath, "-e", PRINT_FLAG,
+  ], { env: fixtureEnv() });
+  assert.equal(stdout, "undefined");
 });
