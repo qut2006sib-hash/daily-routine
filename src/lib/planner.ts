@@ -92,7 +92,17 @@ function validateCompletion(raw: unknown): Completion {
   const value = object(raw, "Completion");
   return { taskId: identifier(value.taskId, "Completed task ID"), date: dateKey(value.date, "Completion date"), title: text(value.title, "Completed task title", 300, true), scheduledTime: time(value.scheduledTime), completedAt: value.completedAt === null ? null : timestamp(value.completedAt, "Completion timestamp") };
 }
-export function createEmptyPlanner(generation: string = crypto.randomUUID()): PlannerData {
+/** getRandomValues also works in HTTP previews and older Android WebViews. */
+export function createPlannerId(): string {
+  const bytes = new Uint8Array(16);
+  globalThis.crypto.getRandomValues(bytes);
+  bytes[6] = (bytes[6]! & 15) | 64;
+  bytes[8] = (bytes[8]! & 63) | 128;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+export function createEmptyPlanner(generation: string = createPlannerId()): PlannerData {
   return { version: 2, generation: identifier(generation, "Dataset generation"), tasks: [], completions: {}, activities: [], notes: {}, settings: { theme: "light", remindersEnabled: false } };
 }
 export function validatePlannerData(raw: unknown): PlannerData {
@@ -221,11 +231,12 @@ export function togglePlannerCompletion(data: PlannerData, taskId: string, day: 
   const completions = { ...data.completions }; delete completions[key];
   return { ...data, completions };
 }
-export function importPlannerNativeCompletion(data: PlannerData, raw: Completion, generation: string, now = new Date()): PlannerData {
+export function importPlannerNativeCompletion(data: PlannerData, raw: Completion, generation: string, _now = new Date()): PlannerData {
   if (generation !== data.generation) fail("This notification belongs to a previous planner.");
   const snapshot = validateCompletion(raw), key = occurrenceKey(snapshot.taskId, snapshot.date);
   if (snapshot.completedAt === null || !snapshot.scheduledTime) fail("The phone action has no recorded completion time.");
-  if (snapshot.date > localDateKey(now)) fail("A future phone task cannot be completed yet.");
+  // A queued action retains the calendar date where it happened. After travel or a
+  // timezone correction that date may be tomorrow in the phone's current zone.
   if (!data.tasks.some((task) => task.id === snapshot.taskId)) fail("This phone action refers to an unknown task.");
   if (data.completions[key]) return data;
   return { ...data, completions: { ...data.completions, [key]: snapshot } };

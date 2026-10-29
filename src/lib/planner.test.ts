@@ -10,7 +10,7 @@ const plan = () => addPlannerTask(createEmptyPlanner("dataset-original"), input,
 
 test("new planner is empty and has a durable generation", () => {
   const data = createEmptyPlanner();
-  assert.match(data.generation, /^[a-f0-9-]{36}$/);
+  assert.match(data.generation, /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);
   assert.deepEqual(data.tasks, []);
   assert.deepEqual(data.activities, []);
   assert.equal(data.settings.remindersEnabled, false);
@@ -113,6 +113,23 @@ test("native Done rejects old dataset, unknown task and fabricated unknown times
   assert.throws(() => importPlannerNativeCompletion(data, snapshot, "previous-dataset", now), /previous/);
   assert.throws(() => importPlannerNativeCompletion(data, { ...snapshot, taskId: "missing" }, data.generation, now), /unknown/);
   assert.throws(() => importPlannerNativeCompletion(data, { ...snapshot, completedAt: null }, data.generation, now), /recorded/);
+});
+
+test("native Done keeps its original occurrence date after travelling to an earlier timezone", () => {
+  const original = process.env.TZ;
+  try {
+    const data = plan();
+    process.env.TZ = "America/Los_Angeles";
+    const received = new Date("2026-10-29T00:01:00.000Z");
+    assert.equal(localDateKey(received), "2026-10-28");
+    const snapshot: Completion = { taskId: "task-1", date: today, title: "Study NumPy",
+      scheduledTime: "09:00", completedAt: "2026-10-29T00:00:00.000Z" };
+    const imported = importPlannerNativeCompletion(data, snapshot, data.generation, received);
+    assert.deepEqual(imported.completions[occurrenceKey("task-1", today)], snapshot);
+    assert.throws(() => completePlannerTask(data, "task-1", today, received), /future/);
+  } finally {
+    if (original === undefined) delete process.env.TZ; else process.env.TZ = original;
+  }
 });
 
 test("strict backup rejects duplicate IDs, bad keys, malformed revisions and nonfinite duration", () => {

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { ActivityInput, Completion, PlannerData, TaskInput, ThemeName } from "./planner-types.ts";
-import { addPlannerActivity, addPlannerTask, archivePlannerTask, completePlannerTask, createEmptyPlanner, importPlannerNativeCompletion, isDateKey, localDateKey, MAX_BACKUP_BYTES, migrateLegacyRoutine, parsePlannerBackup, togglePlannerCompletion, updatePlannerTask, validatePlannerData } from "./planner.ts";
+import { addPlannerActivity, addPlannerTask, archivePlannerTask, completePlannerTask, createEmptyPlanner, createPlannerId, importPlannerNativeCompletion, isDateKey, localDateKey, MAX_BACKUP_BYTES, migrateLegacyRoutine, parsePlannerBackup, togglePlannerCompletion, updatePlannerTask, validatePlannerData } from "./planner.ts";
 
 export const PLANNER_STORAGE_KEY = "dayline.planner.v2";
 export const LEGACY_STORAGE_KEY = "dayline.routine.v1";
@@ -27,7 +27,7 @@ function storageMessage(reason: unknown): string {
   return reason instanceof Error ? reason.message : "Device storage could not be accessed.";
 }
 export function createPlannerStore(options: StoreOptions = {}) {
-  const now = options.now ?? (() => new Date()), createId = options.createId ?? (() => crypto.randomUUID());
+  const now = options.now ?? (() => new Date()), createId = options.createId ?? createPlannerId;
   const getStorage = (): PlannerStorage | null | undefined => Object.hasOwn(options, "storage") ? options.storage : typeof localStorage === "undefined" ? null : localStorage;
   let loadedSafely = false;
   return create<PlannerState>((set, get) => {
@@ -109,7 +109,7 @@ export function createPlannerStore(options: StoreOptions = {}) {
       restoreBackup(json) {
         const restored = parsePlannerBackup(json);
         let generation = createId();
-        if (generation === restored.generation || generation === get().data.generation) generation = crypto.randomUUID();
+        if (generation === restored.generation || generation === get().data.generation) generation = createPlannerId();
         persist({ ...restored, generation }, true);
       },
     };
