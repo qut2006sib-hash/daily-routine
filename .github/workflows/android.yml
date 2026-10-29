@@ -2,7 +2,7 @@ name: Android candidate
 on:
   pull_request:
   push:
-    branches: [main, feat/android-day-planner]
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
@@ -21,7 +21,12 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '13114758'
+          packages: 'platform-tools'
+          log-accepted-android-sdk-licenses: 'false'
       - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - run: node scripts/normalize-android-sdk.mjs
       - run: npm ci
       - run: npm test
       - run: npm run typecheck
