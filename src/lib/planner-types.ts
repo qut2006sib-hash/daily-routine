@@ -1,0 +1,20 @@
+export type RepeatRule = "none" | "daily" | "weekdays" | "weekly";
+export type ThemeName = "light" | "dark";
+export type TaskInput = { title: string; notes: string; date: string; time: string; durationMinutes: number; repeat: RepeatRule; reminder: boolean };
+export type TaskRevision = TaskInput & { effectiveFrom: string; archived: boolean };
+export type PlannerTask = { id: string; revisions: TaskRevision[] };
+export type DayTask = TaskInput & { id: string; occurrenceKey: string };
+export type Completion = { taskId: string; date: string; title: string; scheduledTime: string; completedAt: string | null };
+export type ActivityInput = { title: string; date: string; minutes: number; notes: string };
+export type Activity = ActivityInput & { id: string; createdAt: string };
+export type DailyNote = { date: string; text: string; updatedAt: string };
+export type PlannerData = {
+  version: 2;
+  generation: string;
+  tasks: PlannerTask[];
+  completions: Record<string, Completion>;
+  activities: Activity[];
+  notes: Record<string, DailyNote>;
+  settings: { theme: ThemeName; remindersEnabled: boolean };
+};
+export type ReminderStatus = { supported: boolean; permission: "granted"|"denied"|"prompt"|"unavailable"; exact: boolean; message: string };
