@@ -8,3 +8,7 @@ dist
 .env
 .env.*
 .grok
+
+dist-mobile
+*.jks
+*.keystore

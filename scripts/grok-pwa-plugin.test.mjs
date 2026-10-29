@@ -6,9 +6,9 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 import {
   appNameFromHost,
-  createHeadInjector,
+  createHeadInjector as createInjector,
   grokXCreatorHeadTags,
-  injectGrokPwaHead,
+  injectGrokPwaHead as injectHead,
   isDocumentPath,
   isInstallQuery,
   publicAppHost,
@@ -20,6 +20,10 @@ import {
 import { renderInstallPage } from "./grok-pwa-plugin.mjs";
 
 const TEMPLATE_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+// Fallback behavior must not inherit the app's tracked Dayline site metadata.
+const EMPTY_WORKSPACE = mkdtempSync(join(tmpdir(), "grok-pwa-empty-"));
+const injectGrokPwaHead = (html, context = {}) => injectHead(html, { cwd: EMPTY_WORKSPACE, ...context });
+const createHeadInjector = (context = {}) => createInjector({ cwd: EMPTY_WORKSPACE, ...context });
 
 test("injects before </head>", () => {
   const out = injectGrokPwaHead("<html><head><title>x</title></head><body></body></html>");
@@ -539,3 +543,15 @@ test("vite plugin bakes og identity as a virtual module", () => {
   assert.match(plugin, /snapshotOgIdentity/);
 });
 
+
+
+test("a Dayline site title takes precedence over document and host fallback titles", () => {
+  const root = mkdtempSync(join(tmpdir(), "grok-pwa-dayline-"));
+  mkdirSync(join(root, "src/lib/og"), { recursive: true });
+  writeFileSync(join(root, "src/lib/og/site.json"), JSON.stringify({ title: "Dayline" }));
+  const output = injectGrokPwaHead("<html><head><title>Document fallback</title></head></html>", {
+    cwd: root, host: "wild-race.grok.me", appName: "App fallback",
+  });
+  assert.match(output, /property="og:title" content="Dayline"/);
+  assert.match(output, /apple-mobile-web-app-title" content="Dayline"/);
+});
