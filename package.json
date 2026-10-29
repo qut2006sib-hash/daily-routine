@@ -1,5 +1,5 @@
 {
-  "name": "app-builder-workspace",
+  "name": "dayline",
   "private": true,
   "sideEffects": false,
   "type": "module",
@@ -16,11 +16,21 @@
     "preview:stop": "node scripts/preview.mjs stop",
     "typecheck": "tsc --noEmit",
     "check:auth": "node scripts/check-auth-invariant.mjs",
-    "test": "node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts src/lib/preview-path-prefix.test.ts",
+    "test": "node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts src/lib/preview-path-prefix.test.ts && npm run test:planner",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:planner": "node --experimental-strip-types --test src/lib/planner.test.ts src/lib/planner-store.test.ts src/lib/reminders.test.ts",
+    "build:mobile": "node scripts/generate-notices.mjs && node scripts/with-app-env.mjs vite build --config vite.mobile.config.ts",
+    "android:sync": "npm run build:mobile && cap sync android",
+    "android:debug": "npm run android:sync && cd android && ./gradlew assembleDebug testDebugUnitTest"
   },
   "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/app": "8.1.0",
+    "@capacitor/cli": "8.6.0",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/share": "8.0.3",
     "@electric-sql/pglite": "^0.5.4",
     "@hookform/resolvers": "^5.7.0",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -95,5 +105,6 @@
     "playwright": "^1.62.0",
     "prettier": "^3.4.0",
     "typescript-eslint": "^8.56.1"
-  }
+  },
+  "version": "0.1.0"
 }
